@@ -1,5 +1,6 @@
 # from config import Config as user_config
 from flask import Flask, render_template, request
+
 from models import db
 from users.routes import users_bp
 
