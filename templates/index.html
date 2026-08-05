@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Голосовой ассистент</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0b0d12;
+            --surface: rgba(22, 26, 36, 0.7);
+            --border: rgba(255, 255, 255, 0.06);
+            --text: #e8edf5;
+            --text-muted: #7a8299;
+            --accent: #6c5ce7;
+            --accent-glow: rgba(108, 92, 231, 0.35);
+            --accent-soft: rgba(108, 92, 231, 0.12);
+            --success: #00d68f;
+            --success-glow: rgba(0, 214, 143, 0.3);
+            --radius: 20px;
+            --radius-sm: 12px;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Animated background */
+        .bg-orbs {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .bg-orbs .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            opacity: 0.08;
+            will-change: transform;
+            animation: orbFloat 24s ease-in-out infinite;
+        }
+
+        .bg-orbs .orb:nth-child(1) {
+            width: 550px;
+            height: 550px;
+            background: #6c5ce7;
+            top: -15%;
+            left: -10%;
+            animation-delay: 0s;
+        }
+
+        .bg-orbs .orb:nth-child(2) {
+            width: 400px;
+            height: 400px;
+            background: #a29bfe;
+            bottom: -10%;
+            right: -8%;
+            animation-delay: -8s;
+        }
+
+        .bg-orbs .orb:nth-child(3) {
+            width: 350px;
+            height: 350px;
+            background: #00d68f;
+            top: 50%;
+            left: 50%;
+            translate: -50% -50%;
+            animation-delay: -16s;
+            opacity: 0.04;
+        }
+
+        @keyframes orbFloat {
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+
+            25% {
+                transform: translate(40px, -50px) scale(1.08);
+            }
+
+            50% {
+                transform: translate(-30px, 30px) scale(0.95);
+            }
+
+            75% {
+                transform: translate(50px, 40px) scale(1.05);
+            }
+        }
+
+        /* Grid pattern overlay */
+        .bg-grid {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            background-size: 56px 56px;
+        }
+
+        /* Main card */
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 520px;
+            padding: 24px;
+        }
+
+        .card {
+            background: var(--surface);
+            backdrop-filter: blur(32px) saturate(1.2);
+            -webkit-backdrop-filter: blur(32px) saturate(1.2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 48px 40px 40px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            transition: border-color 0.5s;
+        }
+
+        .card.listening {
+            border-color: var(--accent);
+        }
+
+        .card.hearing {
+            border-color: var(--success);
+        }
+
+        /* Header */
+        .header {
+            margin-bottom: 36px;
+        }
+
+        .header .icon {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 0.3px;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.04);
+            padding: 6px 16px 6px 12px;
+            border-radius: 100px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .header .icon svg {
+            width: 16px;
+            height: 16px;
+            opacity: 0.5;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-top: 20px;
+            letter-spacing: -0.3px;
+            background: linear-gradient(135deg, #e8edf5 0%, #a0a8c0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            font-weight: 400;
+        }
+
+        /* Mic circle */
+        .mic-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 12px auto 20px;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .mic-ring {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 2px solid rgba(108, 92, 231, 0.08);
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .mic-wrap.active .mic-ring {
+            border-color: var(--accent);
+            box-shadow: 0 0 40px var(--accent-glow), inset 0 0 40px var(--accent-glow);
+            animation: ringPulse 2s ease-in-out infinite;
+        }
+
+        .mic-wrap.hearing .mic-ring {
+            border-color: var(--success);
+            box-shadow: 0 0 50px var(--success-glow), inset 0 0 50px var(--success-glow);
+            animation: ringPulse 0.8s ease-in-out infinite;
+        }
+
+        @keyframes ringPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.05);
+                opacity: 0.8;
+            }
+        }
+
+        /* Expanding ripple rings */
+        .ripple-ring {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 1.5px solid var(--accent);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .mic-wrap.active .ripple-ring:nth-child(2) {
+            animation: ripple 2.4s ease-out infinite;
+        }
+
+        .mic-wrap.active .ripple-ring:nth-child(3) {
+            animation: ripple 2.4s ease-out 0.8s infinite;
+        }
+
+        .mic-wrap.active .ripple-ring:nth-child(4) {
+            animation: ripple 2.4s ease-out 1.6s infinite;
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: scale(2.2);
+                opacity: 0;
+            }
+        }
+
+        .mic-btn {
+            position: relative;
+            z-index: 2;
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(145deg, rgba(108, 92, 231, 0.2), rgba(108, 92, 231, 0.05));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .mic-btn:hover {
+            transform: scale(1.03);
+            background: linear-gradient(145deg, rgba(108, 92, 231, 0.28), rgba(108, 92, 231, 0.08));
+        }
+
+        .mic-btn:active {
+            transform: scale(0.96);
+        }
+
+        .mic-wrap.active .mic-btn {
+            background: linear-gradient(145deg, rgba(108, 92, 231, 0.35), rgba(108, 92, 231, 0.15));
+            box-shadow: 0 0 40px var(--accent-glow);
+        }
+
+        .mic-wrap.hearing .mic-btn {
+            background: linear-gradient(145deg, rgba(0, 214, 143, 0.25), rgba(0, 214, 143, 0.08));
+            box-shadow: 0 0 40px var(--success-glow);
+        }
+
+        .mic-btn svg {
+            width: 40px;
+            height: 40px;
+            fill: none;
+            stroke: var(--text);
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            transition: all 0.4s;
+        }
+
+        .mic-wrap.active .mic-btn svg {
+            stroke: var(--accent);
+        }
+
+        .mic-wrap.hearing .mic-btn svg {
+            stroke: var(--success);
+        }
+
+        /* Audio visualizer */
+        .visualizer-wrap {
+            margin: 0 auto 4px;
+            width: 200px;
+            height: 48px;
+            position: relative;
+            opacity: 0;
+            transform: scaleY(0.5);
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-origin: center;
+            pointer-events: none;
+        }
+
+        .visualizer-wrap.visible {
+            opacity: 1;
+            transform: scaleY(1);
+        }
+
+        .visualizer-wrap canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Status */
+        .status {
+            font-size: 13px;
+            font-weight: 500;
+            min-height: 24px;
+            margin-top: 8px;
+            transition: color 0.3s;
+            letter-spacing: 0.2px;
+        }
+
+        .status.idle {
+            color: var(--text-muted);
+        }
+
+        .status.listening {
+            color: var(--accent);
+        }
+
+        .status.hearing {
+            color: var(--success);
+        }
+
+        /* Transcript */
+        .transcript {
+            margin-top: 20px;
+            min-height: 60px;
+            max-height: 120px;
+            overflow-y: auto;
+            padding: 16px 20px;
+            border-radius: var(--radius-sm);
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 15px;
+            line-height: 1.6;
+            text-align: left;
+            color: var(--text);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+            transition: all 0.4s;
+        }
+
+        .transcript:empty {
+            display: none;
+        }
+
+        .transcript .interim {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .transcript .final {
+            color: var(--text);
+        }
+
+        .transcript .final+.final {
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        /* Response area */
+        .response {
+            margin-top: 12px;
+            padding: 16px 20px;
+            border-radius: var(--radius-sm);
+            background: var(--accent-soft);
+            border: 1px solid rgba(108, 92, 231, 0.12);
+            font-size: 14px;
+            line-height: 1.7;
+            text-align: left;
+            color: var(--text);
+            display: none;
+            animation: fadeSlideUp 0.4s ease;
+        }
+
+        .response.visible {
+            display: block;
+        }
+
+        .response .label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+
+        @keyframes fadeSlideUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Controls row */
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .controls button {
+            padding: 8px 18px;
+            border-radius: 100px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.25s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .controls button:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .controls button:active {
+            transform: scale(0.96);
+        }
+
+        .controls button svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .card {
+                padding: 32px 24px 28px;
+                border-radius: 16px;
+            }
+
+            .mic-btn {
+                width: 80px;
+                height: 80px;
+            }
+
+            .mic-btn svg {
+                width: 34px;
+                height: 34px;
+            }
+
+            .header h1 {
+                font-size: 19px;
+            }
+
+            .visualizer-wrap {
+                width: 160px;
+                height: 40px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="bg-orbs">
+        <div class="orb"></div>
+        <div class="orb"></div>
+        <div class="orb"></div>
+    </div>
+    <div class="bg-grid"></div>
+
+    <div class="container">
+        <div class="card" id="card">
+            <div class="header">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                        <line x1="12" y1="19" x2="12" y2="22" />
+                    </svg>
+                    Голосовой ассистент
+                </div>
+                <h1>Чем я могу помочь?</h1>
+                <p>Нажмите на микрофон и начните говорить</p>
+            </div>
+
+            <!-- Microphone -->
+            <div class="mic-wrap" id="micWrap">
+                <div class="ripple-ring"></div>
+                <div class="ripple-ring"></div>
+                <div class="ripple-ring"></div>
+                <div class="mic-ring"></div>
+                <button class="mic-btn" id="micBtn" aria-label="Начать запись">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                        <line x1="12" y1="19" x2="12" y2="22" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Visualizer -->
+            <div class="visualizer-wrap" id="visualizerWrap">
+                <canvas id="visualizer" width="400" height="96"></canvas>
+            </div>
+
+            <!-- Status -->
+            <div class="status idle" id="status">Нажмите микрофон, чтобы начать</div>
+
+            <!-- Transcript -->
+            <div class="transcript" id="transcript"></div>
+
+            <!-- Response -->
+            <div class="response" id="response">
+                <div class="label">Ответ</div>
+                <div id="responseText"></div>
+            </div>
+
+            <!-- Controls -->
+            <div class="controls">
+                <button id="clearBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                        <path d="M10 11v6" />
+                        <path d="M14 11v6" />
+                    </svg>
+                    Очистить
+                </button>
+                <button id="micToggleBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                        <line x1="12" y1="19" x2="12" y2="22" />
+                    </svg>
+                    Микрофон
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            'use strict';
+
+            const micWrap = document.getElementById('micWrap');
+            const micBtn = document.getElementById('micBtn');
+            const card = document.getElementById('card');
+            const statusEl = document.getElementById('status');
+            const transcript = document.getElementById('transcript');
+            const response = document.getElementById('response');
+            const responseText = document.getElementById('responseText');
+            const clearBtn = document.getElementById('clearBtn');
+            const visWrap = document.getElementById('visualizerWrap');
+            const canvas = document.getElementById('visualizer');
+            const ctx = canvas.getContext('2d');
+
+            // ── State ──
+            const STATE = { IDLE: 0, LISTENING: 1, HEARING: 2 };
+            let state = STATE.IDLE;
+            let recognition = null;
+            let isSupported = false;
+            let finalTranscript = '';
+            let animFrameId = null;
+            let analyserNode = null;
+            let audioCtx = null;
+            let mediaStream = null;
+            let freqData = null;
+
+            // ── Check support ──
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            isSupported = !!SpeechRecognition;
+
+            // ── DOM refs ──
+            function setState(newState) {
+                state = newState;
+                micWrap.classList.remove('active', 'hearing');
+                card.classList.remove('listening', 'hearing');
+                visWrap.classList.remove('visible');
+                statusEl.className = 'status';
+
+                switch (state) {
+                    case STATE.IDLE:
+                        statusEl.textContent = isSupported ? 'Нажмите микрофон, чтобы начать' : 'Браузер не поддерживает распознавание речи';
+                        statusEl.classList.add('idle');
+                        break;
+                    case STATE.LISTENING:
+                        micWrap.classList.add('active');
+                        card.classList.add('listening');
+                        visWrap.classList.add('visible');
+                        statusEl.textContent = 'Слушаю...';
+                        statusEl.classList.add('listening');
+                        break;
+                    case STATE.HEARING:
+                        micWrap.classList.add('active', 'hearing');
+                        card.classList.add('listening', 'hearing');
+                        visWrap.classList.add('visible');
+                        statusEl.textContent = 'Слышу вас';
+                        statusEl.classList.add('hearing');
+                        break;
+                }
+            }
+
+            function updateMicIcon(listening) {
+                // The SVG path doesn't need to change; the CSS stroke color handles it
+            }
+
+            // ── Audio visualizer ──
+            function startVisualizer(stream) {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioCtx.createMediaStreamSource(stream);
+                analyserNode = audioCtx.createAnalyser();
+                analyserNode.fftSize = 256;
+                source.connect(analyserNode);
+                freqData = new Uint8Array(analyserNode.frequencyBinCount);
+                drawVisualizer();
+            }
+
+            function stopVisualizer() {
+                if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+                analyserNode = null;
+                freqData = null;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawIdleWaveform();
+            }
+
+            function drawIdleWaveform() {
+                const w = canvas.width, h = canvas.height;
+                ctx.clearRect(0, 0, w, h);
+
+                const bars = 48;
+                const gap = 2;
+                const barW = (w - gap * (bars - 1)) / bars;
+
+                ctx.fillStyle = 'rgba(108,92,231,0.06)';
+                for (let i = 0; i < bars; i++) {
+                    const x = i * (barW + gap);
+                    const barH = 6 + Math.sin(i * 0.5 + Date.now() * 0.002) * 3;
+                    const y = (h - barH) / 2;
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, barW, barH, barW / 2);
+                    ctx.fill();
+                }
+            }
+
+            function drawVisualizer() {
+                if (!analyserNode) { drawIdleWaveform(); animFrameId = requestAnimationFrame(drawVisualizer); return; }
+                analyserNode.getByteFrequencyData(freqData);
+
+                const w = canvas.width, h = canvas.height;
+                ctx.clearRect(0, 0, w, h);
+
+                const bars = 48;
+                const gap = 2;
+                const barW = (w - gap * (bars - 1)) / bars;
+                const step = Math.floor(freqData.length / bars);
+
+                for (let i = 0; i < bars; i++) {
+                    let sum = 0;
+                    for (let j = 0; j < step; j++) sum += freqData[i * step + j];
+                    const avg = sum / step;
+                    const norm = avg / 255;
+                    const barH = Math.max(2, norm * h * 0.85);
+
+                    const x = i * (barW + gap);
+                    const y = (h - barH) / 2;
+
+                    const t = i / bars;
+                    const r = 108 + Math.round((162 - 108) * t);
+                    const g = 92 + Math.round((140 - 92) * (1 - t));
+                    const b = 231;
+
+                    const alpha = 0.3 + norm * 0.7;
+                    ctx.fillStyle = state === STATE.HEARING
+                        ? `rgba(0, 214, 143, ${alpha})`
+                        : `rgba(${r}, ${g}, ${b}, ${alpha})`;
+
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, barW, barH, barW / 2);
+                    ctx.fill();
+                }
+
+                animFrameId = requestAnimationFrame(drawVisualizer);
+            }
+
+            // ── Speech Recognition ──
+            function startRecognition() {
+                if (!isSupported) return;
+                if (recognition) {
+                    try { recognition.abort(); } catch (e) { }
+                }
+
+                recognition = new SpeechRecognition();
+                recognition.lang = 'ru-RU';
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                recognition.maxAlternatives = 1;
+
+                recognition.onstart = () => {
+                    setState(STATE.LISTENING);
+                };
+
+                recognition.onresult = (event) => {
+                    let interim = '';
+                    let final = '';
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const result = event.results[i];
+                        if (result.isFinal) {
+                            final += result[0].transcript;
+                        } else {
+                            interim += result[0].transcript;
+                        }
+                    }
+
+                    if (final) {
+                        finalTranscript += (finalTranscript ? ' ' : '') + final;
+                    }
+
+                    renderTranscript(finalTranscript, interim);
+                    setState(interim ? STATE.HEARING : STATE.LISTENING);
+                };
+
+                recognition.onerror = (event) => {
+                    if (event.error === 'no-speech') return;
+                    if (event.error === 'aborted') return;
+                    statusEl.textContent = 'Ошибка: ' + event.error;
+                    stopRecognition();
+                };
+
+                recognition.onend = () => {
+                    // If we're still supposed to be listening, restart
+                    if (state !== STATE.IDLE) {
+                        try { recognition.start(); } catch (e) { }
+                    } else {
+                        stopVisualizer();
+                    }
+                };
+
+                // Start mic stream for visualizer
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        mediaStream = stream;
+                        startVisualizer(stream);
+                        try { recognition.start(); } catch (e) {
+                            statusEl.textContent = 'Не удалось запустить распознавание';
+                            setState(STATE.IDLE);
+                        }
+                    })
+                    .catch(err => {
+                        statusEl.textContent = 'Нет доступа к микрофону';
+                        setState(STATE.IDLE);
+                    });
+            }
+
+            function stopRecognition() {
+                if (recognition) {
+                    try { recognition.stop(); } catch (e) { }
+                    try { recognition.abort(); } catch (e) { }
+                    recognition = null;
+                }
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(t => t.stop());
+                    mediaStream = null;
+                }
+                if (audioCtx) {
+                    audioCtx.close().catch(() => { });
+                    audioCtx = null;
+                }
+                stopVisualizer();
+                setState(STATE.IDLE);
+            }
+
+            function toggleMic() {
+                if (state !== STATE.IDLE) {
+                    stopRecognition();
+                } else {
+                    startRecognition();
+                }
+            }
+
+            function renderTranscript(final, interim) {
+                transcript.innerHTML = '';
+                if (final) {
+                    const p = document.createElement('div');
+                    p.className = 'final';
+                    p.textContent = final;
+                    transcript.appendChild(p);
+                }
+                if (interim) {
+                    const p = document.createElement('div');
+                    p.className = 'interim';
+                    p.textContent = interim;
+                    transcript.appendChild(p);
+                }
+                transcript.scrollTop = transcript.scrollHeight;
+            }
+
+            function clearAll() {
+                finalTranscript = '';
+                transcript.innerHTML = '';
+                response.classList.remove('visible');
+                responseText.textContent = '';
+                if (state !== STATE.IDLE) stopRecognition();
+            }
+
+            // ── Events ──
+            micBtn.addEventListener('click', toggleMic);
+
+            clearBtn.addEventListener('click', clearAll);
+
+            document.getElementById('micToggleBtn').addEventListener('click', toggleMic);
+
+            // Keyboard shortcut: Space to toggle
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+                if (e.code === 'Space') { e.preventDefault(); toggleMic(); }
+            });
+
+            // ── Init ──
+            if (!isSupported) {
+                statusEl.textContent = 'Браузер не поддерживает распознавание речи';
+            }
+            drawIdleWaveform();
+            setState(STATE.IDLE);
+        })();
+    </script>
+</body>
+
+</html>
