@@ -1,8 +1,9 @@
 # from config import Config as user_config
 from flask import Flask, render_template, request
 
-from models import db
-from users.routes import users_bp
+from app.db_func.models import db
+from app.users.routes import users_bp
+from app.users.test import test
 
 app = Flask(__name__)
 # app.config.from_object(user_config)
@@ -28,6 +29,7 @@ def home():
 
 
 app.register_blueprint(users_bp, url_prefix="/users")
+
 
 if __name__ == "__main__":
     app.run(debug=True)

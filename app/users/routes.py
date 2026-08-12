@@ -1,4 +1,11 @@
-from flask import Blueprint, jsonify, redirect, render_template, request
+from flask import (
+    Blueprint,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 
 users_bp = Blueprint(
     "users",
@@ -29,5 +36,23 @@ def register():
 
         if email and password:
             # db fun
-            redirect()
+            redirect(url_for("users.profile"))
     return render_template("users/register.html")
+
+
+@users_bp.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+
+        if email and password:
+            # db fun
+            redirect(url_for("users.profile"))
+    return render_template("users/login.html")
+
+
+@users_bp.route("/logout", methods=["GET"])
+def logout():
+    # db fun
+    return redirect(url_for("users.login"))
