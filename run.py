@@ -1,9 +1,7 @@
 # from config import Config as user_config
-from flask import Flask, render_template, request
-
 from app.db_func.models import db
 from app.users.routes import users_bp
-from app.users.test import test
+from flask import Flask, render_template, request
 
 app = Flask(__name__)
 # app.config.from_object(user_config)

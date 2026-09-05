@@ -13,6 +13,7 @@ users_bp = Blueprint(
     url_prefix="/users",
     template_folder="templates",
 )
+from app.db_func.user_func import create_user, get_user_by_id
 
 
 @users_bp.route("/", methods=["GET", "POST"])
@@ -20,11 +21,12 @@ def index():
     return jsonify({"module": "users", "status": "ok"})
 
 
-@users_bp.route("/profile", methods=["GET"])
-def profile():
-    data = {
-        "user_name": "Bob",
-    }
+@users_bp.route("/profile/<id>", methods=["GET"])
+def profile(id):
+
+    user_obj = get_user_by_id(id)
+    print(user_obj)
+    data = {"user_email": user_obj.email}
     return render_template("users/profile.html", data=data)
 
 
@@ -35,8 +37,8 @@ def register():
         password = request.form.get("password")
 
         if email and password:
-            # db fun
-            redirect(url_for("users.profile"))
+            create_user(email=email, password=password)
+            return redirect(url_for("users.login"))
     return render_template("users/register.html")
 
 
@@ -48,7 +50,7 @@ def login():
 
         if email and password:
             # db fun
-            redirect(url_for("users.profile"))
+            return redirect(url_for("users.profile"))
     return render_template("users/login.html")
 
 

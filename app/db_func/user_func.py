@@ -1,5 +1,6 @@
-from models import User, db
 from werkzeug.security import check_password_hash, generate_password_hash
+
+from app.db_func.models import User, db
 
 # CRUD
 # Create
@@ -24,6 +25,7 @@ def create_user(
     password,
     name=None,
 ):
+    email = email.lower().strip()
     if not validate_password(password):
         raise ValueError("Password must be at least 8 characters long")
 
@@ -34,7 +36,11 @@ def create_user(
         raise ValueError("Email already exists")
 
     password = generate_password_hash(password)
-    user = User(name=name, email=email, password=password)
+    user = User(
+        name=name,
+        email=email,
+        password=password,
+    )
     db.session.add(user)
     db.session.commit()
 
